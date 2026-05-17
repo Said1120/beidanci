@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中考背单词</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">词</div>
+        <div>
+          <h1>中考背单词</h1>
+          <p>今日 <span id="todayText"></span></p>
+        </div>
+      </div>
+      <div class="save-state" id="saveState">本地保存</div>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="主导航">
+        <button class="nav-button active" data-nav="dashboard">仪表盘</button>
+        <button class="nav-button" data-nav="import">导入单词</button>
+        <button class="nav-button" data-nav="recite">背诵模式</button>
+        <button class="nav-button" data-nav="test">测试模式</button>
+        <button class="nav-button" data-nav="wordbook">单词本</button>
+        <button class="nav-button" data-nav="wrongbook">错词本</button>
+        <button class="nav-button" data-nav="review">复习计划</button>
+        <button class="nav-button" data-nav="records">复习记录</button>
+        <button class="nav-button" data-nav="backup">备份</button>
+      </nav>
+
+      <main class="content">
+        <section class="view active" id="view-dashboard">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2>今日学习概览</h2>
+            </div>
+            <button class="primary-button" data-goto="import">导入单词</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span>今日导入</span>
+              <strong id="dashTodayCount">0</strong>
+              <small>个单词</small>
+            </article>
+            <article class="stat-card">
+              <span>总单词数</span>
+              <strong id="dashTotalCount">0</strong>
+              <small>累计保存</small>
+            </article>
+            <article class="stat-card status-unknown">
+              <span>不会</span>
+              <strong id="dashUnknownCount">0</strong>
+              <small>需要优先复习</small>
+            </article>
+            <article class="stat-card status-fuzzy">
+              <span>模糊</span>
+              <strong id="dashFuzzyCount">0</strong>
+              <small>还不稳定</small>
+            </article>
+            <article class="stat-card status-known">
+              <span>已掌握</span>
+              <strong id="dashKnownCount">0</strong>
+              <small>继续保持</small>
+            </article>
+          </div>
+
+          <div class="quick-actions">
+            <button class="primary-button" data-goto="import">导入单词</button>
+            <button class="secondary-button" data-start-reciting="today">开始背诵</button>
+            <button class="secondary-button" data-start-testing="today">开始测试</button>
+            <button class="secondary-button" data-goto="wordbook">查看单词本</button>
+            <button class="secondary-button" data-goto="wrongbook">查看错词本/生词本</button>
+            <button class="secondary-button" data-goto="records">查看复习记录</button>
+          </div>
+
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-title">
+                <h3>今日建议复习</h3>
+                <button class="text-button" data-start-reciting="review">开始</button>
+              </div>
+              <div id="dashboardReviewList" class="mini-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <h3>掌握分布</h3>
+              </div>
+              <div class="progress-stack" id="masteryBars"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-import">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Import</p>
+              <h2>批量导入单词</h2>
+            </div>
+            <input class="date-input" type="date" id="importDate">
+          </div>
+
+          <div class="panel">
+            <textarea id="importText" class="import-box" spellcheck="false" placeholder="apple 苹果&#10;important - 重要的&#10;decision: 决定&#10;environment，环境&#10;protect, 保护"></textarea>
+            <div class="toolbar">
+              <button class="primary-button" id="parseImportBtn">识别单词</button>
+              <button class="secondary-button" id="clearImportBtn">清空</button>
+              <span class="muted" id="importHint">支持空格、短横线、冒号、逗号分隔。</span>
+            </div>
+          </div>
+
+          <div class="panel hidden" id="importPreviewPanel">
+            <div class="panel-title">
+              <h3>识别结果</h3>
+              <button class="primary-button" id="confirmImportBtn">确认导入</button>
+            </div>
+            <div id="importSummary" class="notice"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>英文</th>
+                    <th>中文释义</th>
+                    <th>日期</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody id="importPreviewBody"></tbody>
+              </table>
+            </div>
+            <div id="invalidLines" class="invalid-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <h3>导入批次</h3>
+              <span class="muted">删错导入时用这里</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>批次</th>
+                    <th>日期</th>
+                    <th>单词数</th>
+                    <th>不会/模糊</th>
+                    <th>导入时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="importBatchBody"></tbody>
+              </table>
+            </div>
+            <div id="importBatchEmpty" class="empty-inline hidden">还没有导入批次。</div>
+          </div>
+        </section>
+
+        <section class="view" id="view-recite">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Recite</p>
+              <h2>背诵模式</h2>
+            </div>
+            <div class="control-row">
+              <select id="reciteScope">
+                <option value="today">今日单词</option>
+                <option value="review">今日建议复习</option>
+                <option value="wrong">错词/生词</option>
+                <option value="fuzzy">模糊词</option>
+                <option value="all">全部单词</option>
+              </select>
+              <button class="primary-button" id="startReciteBtn">开始背诵</button>
+            </div>
+          </div>
+
+          <div id="reciteEmpty" class="empty-state">选择范围后开始背诵。</div>
+
+          <div id="recitePanel" class="study-panel hidden">
+            <div class="study-topline">
+              <button class="secondary-button compact" id="prevReciteBtn">上一题</button>
+              <span id="reciteProgress">第 0 / 0 个</span>
+              <button class="secondary-button compact" id="nextReciteBtn">下一题</button>
+            </div>
+            <article class="word-card" id="reciteCard">
+              <span class="status-pill" id="reciteStatusPill">未学习</span>
+              <h3 id="reciteWord">word</h3>
+              <p id="reciteMeaning" class="card-meaning hidden-text">点击显示中文释义</p>
+              <button class="secondary-button" id="revealMeaningBtn">显示释义</button>
+            </article>
+            <div class="judgement-row">
+              <button class="judge known" data-recitetag="known">会</button>
+              <button class="judge unknown" data-recitetag="unknown">不会</button>
+              <button class="judge fuzzy" data-recitetag="fuzzy">模糊</button>
+            </div>
+          </div>
+
+          <div id="reciteSummary" class="panel hidden"></div>
+        </section>
+
+        <section class="view" id="view-test">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Test</p>
+              <h2>测试模式</h2>
+            </div>
+            <div class="control-row">
+              <select id="testScope">
+                <option value="today">今日单词</option>
+                <option value="review">今日建议复习</option>
+                <option value="wrong">错词/生词</option>
+                <option value="fuzzy">模糊词</option>
+                <option value="all">全部单词</option>
+              </select>
+              <button class="primary-button" id="startTestBtn">开始测试</button>
+            </div>
+          </div>
+
+          <div class="mode-switch">
+            <button class="mode-button active" data-test-mode="enToZh">看英文，想中文</button>
+            <button class="mode-button" data-test-mode="zhToEn">看中文，想英文</button>
+          </div>
+
+          <div id="testEmpty" class="empty-state">选择方式后开始测试。</div>
+
+          <div id="testPanel" class="study-panel hidden">
+            <div class="study-topline">
+              <span id="testProgress">第 0 / 0 题</span>
+              <span id="testLiveScore">正确 0 · 错误 0</span>
+            </div>
+            <article class="word-card test-card">
+              <span class="status-pill" id="testStatusPill">测试</span>
+              <h3 id="testPrompt">prompt</h3>
+              <p id="testAnswer" class="card-meaning hidden-text">答案</p>
+              <div id="enToZhControls" class="test-controls">
+                <button class="secondary-button" id="showTestAnswerBtn">显示答案</button>
+                <div class="judgement-row hidden" id="testJudgeRow">
+                  <button class="judge known" data-testtag="correct">答对</button>
+                  <button class="judge unknown" data-testtag="wrong">答错</button>
+                  <button class="judge fuzzy" data-testtag="fuzzy">模糊</button>
+                </div>
+              </div>
+              <div id="zhToEnControls" class="test-controls hidden">
+                <input id="answerInput" class="answer-input" type="text" autocomplete="off" placeholder="输入英文单词">
+                <div class="toolbar">
+                  <button class="primary-button" id="submitAnswerBtn">提交答案</button>
+                  <button class="secondary-button" id="markFuzzyBtn">标记模糊</button>
+                  <button class="secondary-button hidden" id="nextTestBtn">下一题</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div id="testSummary" class="panel hidden"></div>
+        </section>
+
+        <section class="view" id="view-wordbook">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Wordbook</p>
+              <h2>单词本管理</h2>
+            </div>
+            <button class="primary-button" id="addWordBtn">添加单词</button>
+          </div>
+
+          <div class="filters">
+            <input id="searchInput" type="search" placeholder="搜索英文或中文">
+            <select id="filterDate">
+              <option value="all">全部日期</option>
+            </select>
+            <select id="filterStatus">
+              <option value="all">全部状态</option>
+              <option value="new">未学习</option>
+              <option value="known">会</option>
+              <option value="unknown">不会</option>
+              <option value="fuzzy">模糊</option>
+            </select>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>英文</th>
+                    <th>中文释义</th>
+                    <th>日期</th>
+                    <th>状态</th>
+                    <th>正确/错误</th>
+                    <th>最近复习</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="wordTableBody"></tbody>
+              </table>
+            </div>
+            <div id="wordbookEmpty" class="empty-inline hidden">还没有符合条件的单词。</div>
+          </div>
+        </section>
+
+        <section class="view" id="view-wrongbook">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Mistakes</p>
+              <h2>错词本 / 生词本</h2>
+            </div>
+            <div class="control-row">
+              <button class="primary-button" data-start-reciting="wrong">复习错词</button>
+              <button class="secondary-button" data-start-testing="wrong">测试错词</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>英文</th>
+                    <th>中文释义</th>
+                    <th>状态</th>
+                    <th>错误次数</th>
+                    <th>最近复习</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="wrongTableBody"></tbody>
+              </table>
+            </div>
+            <div id="wrongbookEmpty" class="empty-inline hidden">当前没有错词或模糊词。</div>
+          </div>
+        </section>
+
+        <section class="view" id="view-review">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Review</p>
+              <h2>复习计划</h2>
+            </div>
+            <button class="primary-button" data-start-reciting="review">开始今日建议复习</button>
+          </div>
+
+          <div class="review-grid">
+            <article class="panel">
+              <div class="panel-title">
+                <h3>今日建议复习</h3>
+                <button class="text-button" data-start-testing="review">测试</button>
+              </div>
+              <div id="reviewSuggestList" class="rank-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <h3>优先复习错词</h3>
+                <button class="text-button" data-start-reciting="wrong">开始</button>
+              </div>
+              <div id="reviewWrongList" class="rank-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <h3>优先复习模糊词</h3>
+                <button class="text-button" data-start-reciting="fuzzy">开始</button>
+              </div>
+              <div id="reviewFuzzyList" class="rank-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-records">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Records</p>
+              <h2>复习记录</h2>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>类型</th>
+                    <th>范围</th>
+                    <th>总数</th>
+                    <th>结果</th>
+                    <th>错词</th>
+                  </tr>
+                </thead>
+                <tbody id="recordTableBody"></tbody>
+              </table>
+            </div>
+            <div id="recordsEmpty" class="empty-inline hidden">还没有复习记录。</div>
+          </div>
+        </section>
+
+        <section class="view" id="view-backup">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Backup</p>
+              <h2>数据导出和备份</h2>
+            </div>
+          </div>
+
+          <div class="backup-grid">
+            <article class="panel">
+              <h3>完整数据</h3>
+              <p class="muted">保存全部单词、复习记录和备注。</p>
+              <div class="toolbar">
+                <button class="primary-button" id="exportJsonBtn">导出全部 JSON</button>
+                <label class="file-button">
+                  导入 JSON
+                  <input type="file" id="importJsonInput" accept="application/json">
+                </label>
+              </div>
+            </article>
+            <article class="panel">
+              <h3>文本导出</h3>
+              <p class="muted">适合复制给 GPT 或打印复习。</p>
+              <div class="toolbar">
+                <button class="secondary-button" id="exportWrongTextBtn">导出错词本</button>
+                <button class="secondary-button" id="exportTodayUnknownBtn">导出今日不会词</button>
+              </div>
+            </article>
+          </div>
+          <div class="panel">
+            <h3>当前数据</h3>
+            <div id="backupStats" class="backup-stats"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="wordDialog">
+    <form method="dialog" class="dialog-card" id="wordForm">
+      <div class="panel-title">
+        <h3 id="dialogTitle">编辑单词</h3>
+        <button class="icon-button" type="button" id="closeDialogBtn" aria-label="关闭">×</button>
+      </div>
+      <input type="hidden" id="editWordId">
+      <label>
+        英文单词
+        <input id="editEnglish" required>
+      </label>
+      <label>
+        中文释义
+        <input id="editMeaning" required>
+      </label>
+      <label>
+        所属日期
+        <input type="date" id="editDate" required>
+      </label>
+      <label>
+        掌握状态
+        <select id="editStatus">
+          <option value="new">未学习</option>
+          <option value="known">会</option>
+          <option value="unknown">不会</option>
+          <option value="fuzzy">模糊</option>
+        </select>
+      </label>
+      <label>
+        备注
+        <textarea id="editNote" rows="3"></textarea>
+      </label>
+      <div class="toolbar right">
+        <button class="secondary-button" type="button" id="cancelEditBtn">取消</button>
+        <button class="primary-button" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
